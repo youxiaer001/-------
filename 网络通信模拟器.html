@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<!-- saved from url=(0102)https://musk-online.fbcontent.cn/pub-musk-ai-studio/workflow/file/document/V6gBbf2TAs5U5shXH7KVvb.html -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网络通信模拟器</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="./网络通信模拟器_files/saved_resource"></script>
+  
+  <!-- Anime.js -->
+  <script src="./网络通信模拟器_files/anime.min.js.下载"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#175FFF',
+            secondary: '#1A243C',
+            accent: '#67F844',
+            highlight: '#F901F7',
+            background: '#1C0C57'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #1C0C57 0%, #0a0520 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    .node {
+      transition: all 0.3s ease;
+    }
+    
+    .node.active {
+      fill: #67F844;
+      filter: drop-shadow(0 0 10px #67F844);
+    }
+    
+    .data-packet {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #67F844, #F901F7);
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(103, 248, 68, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .packet-slot {
+      width: 50px;
+      height: 50px;
+      border: 2px dashed #175FFF;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(23, 95, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .packet-slot.filled {
+      border-color: #67F844;
+      background: rgba(103, 248, 68, 0.2);
+      border-style: solid;
+    }
+    
+    .packet-slot.waiting {
+      border-color: #FF6B6B;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .packet-structure-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+    }
+    
+    .packet-part {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+      transition: all 0.3s ease;
+    }
+    
+    .packet-part.large {
+      height: 104px;
+      font-size: 16px;
+    }
+    
+    .packet-header {
+      background: linear-gradient(135deg, #175FFF, #4A90FF);
+      flex: 0 0 30%;
+    }
+    
+    .packet-data {
+      background: linear-gradient(135deg, #67F844, #4ECDC4);
+      flex: 1;
+    }
+    
+    .packet-trailer {
+      background: linear-gradient(135deg, #F901F7, #FF6B6B);
+      flex: 0 0 20%;
+    }
+    
+    .mode-btn {
+      transition: all 0.3s ease;
+    }
+    
+    .mode-btn.active {
+      background: linear-gradient(135deg, #175FFF, #F901F7);
+      transform: scale(1.05);
+    }
+    
+
+    
+    .endpoint {
+      background: rgba(23, 95, 255, 0.2);
+      border: 3px solid #175FFF;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .endpoint:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(23, 95, 255, 0.4);
+    }
+    
+    .btn-send {
+      background: linear-gradient(135deg, #175FFF, #F901F7);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-send:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(23, 95, 255, 0.5);
+    }
+    
+    .btn-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .path-line {
+      stroke: #F901F7;
+      stroke-width: 3;
+      stroke-dasharray: 10 5;
+      opacity: 0;
+      animation: dash 1s linear infinite;
+    }
+    
+    .topology-line {
+      stroke: rgba(23, 95, 255, 0.3);
+      stroke-width: 1.5;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .topology-line.visible {
+      opacity: 1;
+    }
+    
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -15;
+      }
+    }
+    
+    .info-card {
+      background: rgba(26, 36, 60, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(23, 95, 255, 0.3);
+    }
+    
+    .help-btn {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #175FFF, #F901F7);
+      box-shadow: 0 4px 20px rgba(23, 95, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      border: none;
+    }
+    
+    .help-btn:hover {
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: 0 6px 30px rgba(23, 95, 255, 0.6);
+    }
+    
+    .help-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    
+    .help-modal.active {
+      display: flex;
+    }
+    
+    .help-content {
+      background: linear-gradient(135deg, #1C0C57 0%, #0a0520 100%);
+      border: 2px solid rgba(23, 95, 255, 0.5);
+      border-radius: 20px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 30px;
+      position: relative;
+    }
+    
+    .help-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      font-size: 26px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .help-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+  </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.visible{visibility:visible}.absolute{position:absolute}.relative{position:relative}.bottom-4{bottom:1rem}.left-1\/2{left:50%}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-6{margin-bottom:1.5rem}.mt-2{margin-top:0.5rem}.mt-1{margin-top:0.25rem}.flex{display:flex}.grid{display:grid}.h-full{height:100%}.w-full{width:100%}.max-w-7xl{max-width:80rem}.flex-1{flex:1 1 0%}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.list-inside{list-style-position:inside}.list-decimal{list-style-type:decimal}.list-disc{list-style-type:disc}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.space-y-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.375rem * var(--tw-space-y-reverse))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.rounded-lg{border-radius:0.5rem}.rounded-xl{border-radius:0.75rem}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-gray-700{--tw-bg-opacity:1;background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))}.bg-gray-800{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.bg-yellow-600{--tw-bg-opacity:1;background-color:rgb(202 138 4 / var(--tw-bg-opacity, 1))}.bg-purple-600{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.bg-opacity-50{--tw-bg-opacity:0.5}.p-3{padding:0.75rem}.p-4{padding:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.text-center{text-align:center}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.text-accent{--tw-text-opacity:1;color:rgb(103 248 68 / var(--tw-text-opacity, 1))}.text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-gray-300{--tw-text-opacity:1;color:rgb(209 213 219 / var(--tw-text-opacity, 1))}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128 / var(--tw-text-opacity, 1))}.text-pink-400{--tw-text-opacity:1;color:rgb(244 114 182 / var(--tw-text-opacity, 1))}.text-primary{--tw-text-opacity:1;color:rgb(23 95 255 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:bg-blue-500:hover{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-600:hover{--tw-bg-opacity:1;background-color:rgb(75 85 99 / var(--tw-bg-opacity, 1))}.hover\:bg-yellow-500:hover{--tw-bg-opacity:1;background-color:rgb(234 179 8 / var(--tw-bg-opacity, 1))}.hover\:bg-purple-500:hover{--tw-bg-opacity:1;background-color:rgb(168 85 247 / var(--tw-bg-opacity, 1))}@media (min-width: 1024px){.lg\:col-span-1{grid-column:span 1 / span 1}.lg\:col-span-3{grid-column:span 3 / span 3}.lg\:grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}}</style><style>.Po4BvhR1CK2tJaywJ6AN path {
+  fill: var(--icon-path-fill);
+}
+.Oz4yDjua3Qe6thqkZYf_ path {
+  transition: 0.2s all;
+}
+.Oz4yDjua3Qe6thqkZYf_:hover path {
+  fill: var(--icon-hover-fill);
+}
+</style><style>/* ！！！切勿直接改动该文件，该文件由 generator.ts 自动生成！！！ */
+/* !!! DONT MODIFY THIS FILE DIRECTLY, THIS FILE IS GENERATED BY generator.ts AUTOMATICALLY !!! */
+.ibW4Oa5B7s2zJKKZ4pCg {
+  user-select: none;
+}
+.AtqKyJetjrG4smuk35Np {
+  max-width: 346px;
+  width: auto;
+  height: 36px;
+  background-color: var(--quark-style-white-color, #fff);
+  padding-left: 10px;
+  padding-right: 4px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border: 1px solid var(--quark-style-gray-20-color, rgba(6, 10, 38, 0.12));
+  box-shadow: 0 12px 32px -6px var(--quark-style-gray-30-fixed-color, rgba(6, 10, 38, 0.24));
+  border-radius: 10px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .g6iGsZa_KHMeW2yICzQQ {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .e4UXx38MPgfHdym_Lzt0 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  height: 28px;
+  padding: 0 6px;
+  margin-right: 2px;
+  border-radius: 6px;
+  column-gap: 4px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .e4UXx38MPgfHdym_Lzt0:hover:not(.ibW4Oa5B7s2zJKKZ4pCg .kNOcXLDT_cCrcoY8LTm8) {
+  background: var(--quark-style-gray-10-color, rgba(6, 10, 38, 0.06));
+}
+.ibW4Oa5B7s2zJKKZ4pCg .kNOcXLDT_cCrcoY8LTm8 {
+  cursor: default;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .kNOcXLDT_cCrcoY8LTm8 .Va3czASiR9Zztyl_lD4M {
+  color: var(--quark-style-gray-40-color, rgba(6, 10, 38, 0.4)) !important;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .e4UXx38MPgfHdym_Lzt0 .Va3czASiR9Zztyl_lD4M {
+  font-size: 15px;
+  color: var(--quark-style-gray-color, #060A26);
+  line-height: 16px;
+  white-space: nowrap;
+  position: relative;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .llw0qsmiI_08u93bFdNg {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  overflow: visible !important;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .LEo8kpqIERehkv8AhAfG {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: visible !important;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .LEo8kpqIERehkv8AhAfG:hover {
+  background: var(--quark-style-gray-10-color, rgba(6, 10, 38, 0.06));
+}
+.ibW4Oa5B7s2zJKKZ4pCg .zoNmooxAnbLEJSN8m1Jg {
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 110px;
+  max-height: 136px;
+  height: auto;
+  top: 36px;
+  right: -5px;
+  padding: 4px 0;
+  background-color: var(--quark-style-white-color, #fff);
+  border: 1px solid var(--quark-style-gray-20-color, rgba(6, 10, 38, 0.12));
+  box-shadow: 0 4px 16px -6px var(--quark-style-gray-20-fixed-color, rgba(6, 10, 38, 0.12));
+  border-radius: 8px;
+  overflow: visible !important;
+  row-gap: 4px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .O1imPofna4elG_8NcQnR {
+  top: -77px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .mdH0IY7jS3Swn5vdX6tz {
+  width: 102px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  column-gap: 8px;
+  border-radius: 6px;
+  padding: 0 6px;
+  box-sizing: border-box;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .mdH0IY7jS3Swn5vdX6tz:hover:not(.ibW4Oa5B7s2zJKKZ4pCg .dEdHLVmn_L2GAzb_cmwt) {
+  background: var(--quark-style-gray-10-color, rgba(6, 10, 38, 0.06));
+}
+.ibW4Oa5B7s2zJKKZ4pCg .dEdHLVmn_L2GAzb_cmwt {
+  cursor: default;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .dEdHLVmn_L2GAzb_cmwt .zEraruudgjR2MToGu4Kw {
+  color: var(--quark-style-gray-40-color, rgba(6, 10, 38, 0.4)) !important;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .XfCMwvO0DsqFCeyzPYP2 {
+  width: 16px;
+  height: 16px;
+}
+.ibW4Oa5B7s2zJKKZ4pCg .zEraruudgjR2MToGu4Kw {
+  font-size: 15px;
+  color: var(--quark-style-gray-color, #060A26);
+}
+.ibW4Oa5B7s2zJKKZ4pCg .KZeoAuXbMIkWzOT4PcH5 {
+  width: 100%;
+  height: 1px;
+  background: var(--quark-style-gray-10-color, rgba(6, 10, 38, 0.06));
+}
+.ZL32C_XdLL8UQRZ3zObd {
+  display: flex;
+  align-items: center;
+}
+.u5llx7cIQZLdrjP5Vag1 {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  cursor: pointer;
+  margin-right: 12px;
+  background: var(--quark-style-gray-60-color, rgba(6, 10, 38, 0.6));
+}
+.ZL32C_XdLL8UQRZ3zObd .LEo8kpqIERehkv8AhAfG {
+  border-radius: 16px !important;
+  background: var(--quark-style-gray-60-color, rgba(6, 10, 38, 0.6)) !important;
+}
+.ZL32C_XdLL8UQRZ3zObd .zoNmooxAnbLEJSN8m1Jg {
+  right: 0 !important;
+}
+.ZL32C_XdLL8UQRZ3zObd {
+  overflow: visible !important;
+}
+</style></head>
+<body class="p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- 标题区 -->
+    <div class="text-center mb-6">
+      <h1 class="text-4xl font-bold mb-2" style="background: linear-gradient(135deg, #175FFF, #F901F7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+        网络通信模拟器
+      </h1>
+      <p class="text-gray-300 text-sm">模拟数据在网络中的传输过程</p>
+    </div>
+    
+    <!-- 主要内容区 -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <!-- 左侧状态面板 -->
+      <div class="lg:col-span-1">
+        <div class="info-card rounded-xl p-4 space-y-4">
+          <div>
+            <h3 class="text-lg font-bold text-white mb-2">🎮 演示模式</h3>
+            <div class="flex gap-2">
+              <button id="basicModeBtn" class="mode-btn active flex-1 py-2 rounded-lg text-white font-bold text-sm bg-gray-700">
+                整体传
+              </button>
+              <button id="advancedModeBtn" class="mode-btn flex-1 py-2 rounded-lg text-white font-bold text-sm bg-gray-700">
+                分包传
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <h3 class="text-lg font-bold text-white mb-2">📊 传输状态</h3>
+            <div class="space-y-1.5 text-gray-300 text-sm">
+              <div class="flex justify-between">
+                <span>当前节点：</span>
+                <span id="currentNode" class="text-accent font-bold">待发送</span>
+              </div>
+              <div class="flex justify-between">
+                <span>已传输：</span>
+                <span id="progress" class="text-accent font-bold">0%</span>
+              </div>
+              <div class="flex justify-between">
+                <span>状态：</span>
+                <span id="status" class="text-accent font-bold">就绪</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 数据包结构图示 -->
+          <div>
+            <h3 class="text-lg font-bold text-white mb-2">📦 数据包结构</h3>
+            <div id="packetStructure" class="space-y-2"><div class="packet-structure-item">
+          <div class="packet-part packet-header large">包头</div>
+          <div class="packet-part packet-data large">数据</div>
+          <div class="packet-part packet-trailer large">包尾</div>
+        </div><div class="text-gray-400 text-xs text-center mt-1">完整数据包</div></div>
+          </div>
+          
+          <!-- 重组区域（高级版，移到左侧面板） -->
+          <div id="reassemblyArea" class="" style="display: none;">
+            <h3 class="text-lg font-bold text-white mb-2">📥 接收端重组区</h3>
+            <div id="packetSlots" class="grid grid-cols-4 gap-2"></div>
+            <div id="reassemblyStatus" class="text-center mt-2 text-gray-300 text-xs"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 右侧可视化区域 -->
+      <div class="lg:col-span-3">
+        <div class="info-card rounded-xl p-4" style="min-height: 500px;">
+          <div id="canvas-container" class="relative w-full h-full flex flex-col items-center justify-center">
+            <svg id="networkSvg" width="100%" height="450" viewBox="0 0 900 450">
+              <!-- 拓扑结构线（初始隐藏） -->
+              <g id="topologyLines"><line x1="270" y1="30" x2="390" y2="30" class="topology-line visible"></line><line x1="270" y1="30" x2="510" y2="30" class="topology-line visible"></line><line x1="270" y1="30" x2="630" y2="30" class="topology-line visible"></line><line x1="270" y1="30" x2="270" y2="130" class="topology-line visible"></line><line x1="270" y1="30" x2="390" y2="130" class="topology-line visible"></line><line x1="270" y1="30" x2="510" y2="130" class="topology-line visible"></line><line x1="270" y1="30" x2="630" y2="130" class="topology-line visible"></line><line x1="270" y1="30" x2="270" y2="230" class="topology-line visible"></line><line x1="270" y1="30" x2="390" y2="230" class="topology-line visible"></line><line x1="270" y1="30" x2="510" y2="230" class="topology-line visible"></line><line x1="270" y1="30" x2="630" y2="230" class="topology-line visible"></line><line x1="270" y1="30" x2="270" y2="330" class="topology-line visible"></line><line x1="270" y1="30" x2="390" y2="330" class="topology-line visible"></line><line x1="270" y1="30" x2="510" y2="330" class="topology-line visible"></line><line x1="270" y1="30" x2="630" y2="330" class="topology-line visible"></line><line x1="390" y1="30" x2="510" y2="30" class="topology-line visible"></line><line x1="390" y1="30" x2="630" y2="30" class="topology-line visible"></line><line x1="390" y1="30" x2="270" y2="130" class="topology-line visible"></line><line x1="390" y1="30" x2="390" y2="130" class="topology-line visible"></line><line x1="390" y1="30" x2="510" y2="130" class="topology-line visible"></line><line x1="390" y1="30" x2="630" y2="130" class="topology-line visible"></line><line x1="390" y1="30" x2="270" y2="230" class="topology-line visible"></line><line x1="390" y1="30" x2="390" y2="230" class="topology-line visible"></line><line x1="390" y1="30" x2="510" y2="230" class="topology-line visible"></line><line x1="390" y1="30" x2="630" y2="230" class="topology-line visible"></line><line x1="390" y1="30" x2="270" y2="330" class="topology-line visible"></line><line x1="390" y1="30" x2="390" y2="330" class="topology-line visible"></line><line x1="390" y1="30" x2="510" y2="330" class="topology-line visible"></line><line x1="390" y1="30" x2="630" y2="330" class="topology-line visible"></line><line x1="510" y1="30" x2="630" y2="30" class="topology-line visible"></line><line x1="510" y1="30" x2="270" y2="130" class="topology-line visible"></line><line x1="510" y1="30" x2="390" y2="130" class="topology-line visible"></line><line x1="510" y1="30" x2="510" y2="130" class="topology-line visible"></line><line x1="510" y1="30" x2="630" y2="130" class="topology-line visible"></line><line x1="510" y1="30" x2="270" y2="230" class="topology-line visible"></line><line x1="510" y1="30" x2="390" y2="230" class="topology-line visible"></line><line x1="510" y1="30" x2="510" y2="230" class="topology-line visible"></line><line x1="510" y1="30" x2="630" y2="230" class="topology-line visible"></line><line x1="510" y1="30" x2="270" y2="330" class="topology-line visible"></line><line x1="510" y1="30" x2="390" y2="330" class="topology-line visible"></line><line x1="510" y1="30" x2="510" y2="330" class="topology-line visible"></line><line x1="510" y1="30" x2="630" y2="330" class="topology-line visible"></line><line x1="630" y1="30" x2="270" y2="130" class="topology-line visible"></line><line x1="630" y1="30" x2="390" y2="130" class="topology-line visible"></line><line x1="630" y1="30" x2="510" y2="130" class="topology-line visible"></line><line x1="630" y1="30" x2="630" y2="130" class="topology-line visible"></line><line x1="630" y1="30" x2="270" y2="230" class="topology-line visible"></line><line x1="630" y1="30" x2="390" y2="230" class="topology-line visible"></line><line x1="630" y1="30" x2="510" y2="230" class="topology-line visible"></line><line x1="630" y1="30" x2="630" y2="230" class="topology-line visible"></line><line x1="630" y1="30" x2="270" y2="330" class="topology-line visible"></line><line x1="630" y1="30" x2="390" y2="330" class="topology-line visible"></line><line x1="630" y1="30" x2="510" y2="330" class="topology-line visible"></line><line x1="630" y1="30" x2="630" y2="330" class="topology-line visible"></line><line x1="270" y1="130" x2="390" y2="130" class="topology-line visible"></line><line x1="270" y1="130" x2="510" y2="130" class="topology-line visible"></line><line x1="270" y1="130" x2="630" y2="130" class="topology-line visible"></line><line x1="270" y1="130" x2="270" y2="230" class="topology-line visible"></line><line x1="270" y1="130" x2="390" y2="230" class="topology-line visible"></line><line x1="270" y1="130" x2="510" y2="230" class="topology-line visible"></line><line x1="270" y1="130" x2="630" y2="230" class="topology-line visible"></line><line x1="270" y1="130" x2="270" y2="330" class="topology-line visible"></line><line x1="270" y1="130" x2="390" y2="330" class="topology-line visible"></line><line x1="270" y1="130" x2="510" y2="330" class="topology-line visible"></line><line x1="270" y1="130" x2="630" y2="330" class="topology-line visible"></line><line x1="390" y1="130" x2="510" y2="130" class="topology-line visible"></line><line x1="390" y1="130" x2="630" y2="130" class="topology-line visible"></line><line x1="390" y1="130" x2="270" y2="230" class="topology-line visible"></line><line x1="390" y1="130" x2="390" y2="230" class="topology-line visible"></line><line x1="390" y1="130" x2="510" y2="230" class="topology-line visible"></line><line x1="390" y1="130" x2="630" y2="230" class="topology-line visible"></line><line x1="390" y1="130" x2="270" y2="330" class="topology-line visible"></line><line x1="390" y1="130" x2="390" y2="330" class="topology-line visible"></line><line x1="390" y1="130" x2="510" y2="330" class="topology-line visible"></line><line x1="390" y1="130" x2="630" y2="330" class="topology-line visible"></line><line x1="510" y1="130" x2="630" y2="130" class="topology-line visible"></line><line x1="510" y1="130" x2="270" y2="230" class="topology-line visible"></line><line x1="510" y1="130" x2="390" y2="230" class="topology-line visible"></line><line x1="510" y1="130" x2="510" y2="230" class="topology-line visible"></line><line x1="510" y1="130" x2="630" y2="230" class="topology-line visible"></line><line x1="510" y1="130" x2="270" y2="330" class="topology-line visible"></line><line x1="510" y1="130" x2="390" y2="330" class="topology-line visible"></line><line x1="510" y1="130" x2="510" y2="330" class="topology-line visible"></line><line x1="510" y1="130" x2="630" y2="330" class="topology-line visible"></line><line x1="630" y1="130" x2="270" y2="230" class="topology-line visible"></line><line x1="630" y1="130" x2="390" y2="230" class="topology-line visible"></line><line x1="630" y1="130" x2="510" y2="230" class="topology-line visible"></line><line x1="630" y1="130" x2="630" y2="230" class="topology-line visible"></line><line x1="630" y1="130" x2="270" y2="330" class="topology-line visible"></line><line x1="630" y1="130" x2="390" y2="330" class="topology-line visible"></line><line x1="630" y1="130" x2="510" y2="330" class="topology-line visible"></line><line x1="630" y1="130" x2="630" y2="330" class="topology-line visible"></line><line x1="270" y1="230" x2="390" y2="230" class="topology-line visible"></line><line x1="270" y1="230" x2="510" y2="230" class="topology-line visible"></line><line x1="270" y1="230" x2="630" y2="230" class="topology-line visible"></line><line x1="270" y1="230" x2="270" y2="330" class="topology-line visible"></line><line x1="270" y1="230" x2="390" y2="330" class="topology-line visible"></line><line x1="270" y1="230" x2="510" y2="330" class="topology-line visible"></line><line x1="270" y1="230" x2="630" y2="330" class="topology-line visible"></line><line x1="390" y1="230" x2="510" y2="230" class="topology-line visible"></line><line x1="390" y1="230" x2="630" y2="230" class="topology-line visible"></line><line x1="390" y1="230" x2="270" y2="330" class="topology-line visible"></line><line x1="390" y1="230" x2="390" y2="330" class="topology-line visible"></line><line x1="390" y1="230" x2="510" y2="330" class="topology-line visible"></line><line x1="390" y1="230" x2="630" y2="330" class="topology-line visible"></line><line x1="510" y1="230" x2="630" y2="230" class="topology-line visible"></line><line x1="510" y1="230" x2="270" y2="330" class="topology-line visible"></line><line x1="510" y1="230" x2="390" y2="330" class="topology-line visible"></line><line x1="510" y1="230" x2="510" y2="330" class="topology-line visible"></line><line x1="510" y1="230" x2="630" y2="330" class="topology-line visible"></line><line x1="630" y1="230" x2="270" y2="330" class="topology-line visible"></line><line x1="630" y1="230" x2="390" y2="330" class="topology-line visible"></line><line x1="630" y1="230" x2="510" y2="330" class="topology-line visible"></line><line x1="630" y1="230" x2="630" y2="330" class="topology-line visible"></line><line x1="270" y1="330" x2="390" y2="330" class="topology-line visible"></line><line x1="270" y1="330" x2="510" y2="330" class="topology-line visible"></line><line x1="270" y1="330" x2="630" y2="330" class="topology-line visible"></line><line x1="390" y1="330" x2="510" y2="330" class="topology-line visible"></line><line x1="390" y1="330" x2="630" y2="330" class="topology-line visible"></line><line x1="510" y1="330" x2="630" y2="330" class="topology-line visible"></line></g>
+              
+              <!-- 路径线（初始隐藏） -->
+              <g id="pathLines"></g>
+              
+              <!-- 发送端 -->
+              <g id="sender">
+                <rect x="30" y="195" width="90" height="60" rx="12" class="endpoint"></rect>
+                <text x="75" y="220" text-anchor="middle" fill="white" font-size="13" font-weight="bold">发送端</text>
+                <text x="75" y="237" text-anchor="middle" fill="#67F844" font-size="11">Sender</text>
+              </g>
+              
+              <!-- 中间节点网格 (4x4) -->
+              <g id="nodes"><circle cx="270" cy="30" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="0" data-col="0"></circle><circle cx="390" cy="30" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="0" data-col="1"></circle><circle cx="510" cy="30" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="0" data-col="2"></circle><circle cx="630" cy="30" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="0" data-col="3"></circle><circle cx="270" cy="130" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="1" data-col="0"></circle><circle cx="390" cy="130" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="1" data-col="1"></circle><circle cx="510" cy="130" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="1" data-col="2"></circle><circle cx="630" cy="130" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="1" data-col="3"></circle><circle cx="270" cy="230" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="2" data-col="0"></circle><circle cx="390" cy="230" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="2" data-col="1"></circle><circle cx="510" cy="230" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="2" data-col="2"></circle><circle cx="630" cy="230" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="2" data-col="3"></circle><circle cx="270" cy="330" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="3" data-col="0"></circle><circle cx="390" cy="330" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="3" data-col="1"></circle><circle cx="510" cy="330" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="3" data-col="2"></circle><circle cx="630" cy="330" r="16" fill="none" stroke="#175FFF" stroke-width="2.5" class="node" data-row="3" data-col="3"></circle></g>
+              
+              <!-- 接收端 -->
+              <g id="receiver">
+                <rect x="780" y="195" width="90" height="60" rx="12" class="endpoint"></rect>
+                <text x="825" y="220" text-anchor="middle" fill="white" font-size="13" font-weight="bold">接收端</text>
+                <text x="825" y="237" text-anchor="middle" fill="#67F844" font-size="11">Receiver</text>
+              </g>
+            </svg>
+            
+            <!-- 数据包容器（动态创建） -->
+            <div id="packetsContainer"></div>
+            
+            <!-- 传输控制按钮区（移到网络节点下方） -->
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
+              <button id="toggleTopologyBtn" class="py-2.5 px-6 rounded-lg text-white font-bold text-base transition-all shadow-lg bg-purple-600 hover:bg-purple-500">隐藏拓扑</button>
+              <button id="sendBtn" class="btn-send py-2.5 px-6 rounded-lg text-white font-bold text-base shadow-lg">
+                发送数据
+              </button>
+              <button id="resetBtn" class="py-2.5 px-6 rounded-lg text-white font-bold text-base bg-gray-700 hover:bg-gray-600 transition-all shadow-lg">
+                重置
+              </button>
+              <button id="pauseBtn" class="py-2.5 px-6 rounded-lg text-white font-bold text-base bg-yellow-600 hover:bg-yellow-500 transition-all shadow-lg" disabled="">
+                暂停
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 教学帮助按钮 -->
+  <button id="helpBtn" class="help-btn" title="教学指南">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  </button>
+  
+  <!-- 教学帮助弹窗 -->
+  <div id="helpModal" class="help-modal">
+    <div class="help-content">
+      <button id="helpClose" class="help-close">×</button>
+      <h2 class="text-3xl font-bold mb-6" style="background: linear-gradient(135deg, #175FFF, #F901F7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">📚 教学指南</h2>
+      
+      <div class="space-y-6 text-gray-300">
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">🎮 两种传输模式</h3>
+          <div class="space-y-2 text-sm">
+            <div class="bg-gray-800 bg-opacity-50 p-3 rounded-lg">
+              <strong class="text-accent">整体传：</strong>数据作为一个完整的包传输，适合小数据量或可靠网络。
+            </div>
+            <div class="bg-gray-800 bg-opacity-50 p-3 rounded-lg">
+              <strong class="text-accent">分包传：</strong>数据拆分成多个小包并行传输，提高效率和可靠性。
+            </div>
+          </div>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">🌐 网络拓扑结构</h3>
+          <p class="text-sm">点击<strong class="text-primary">"显示拓扑"</strong>按钮，可以看到16个节点之间的120条连接线（全连接网状拓扑）。虽然有很多连接，但数据包只会选择其中几条作为传输路径，这就是路由算法的作用。</p>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">📦 数据包结构</h3>
+          <div class="space-y-2 text-sm">
+            <p><strong class="text-blue-400">包头：</strong>包含源地址、目标地址、序号等控制信息</p>
+            <p><strong class="text-green-400">数据：</strong>实际传输的内容</p>
+            <p><strong class="text-pink-400">包尾：</strong>校验码、结束标记等</p>
+          </div>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">🎯 分包传输特点</h3>
+          <ul class="space-y-2 text-sm list-disc list-inside">
+            <li>每个分包都有独立的包头和包尾</li>
+            <li>包头中包含序号，用于接收端重组</li>
+            <li>不同分包可以选择不同路径并行传输</li>
+            <li>丢包时只需重传丢失的分包</li>
+          </ul>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">⚠️ 丢包重传机制</h3>
+          <p class="text-sm">在分包传模式下，第3号包有80%概率丢失。观察丢包后的处理流程：</p>
+          <ol class="space-y-2 text-sm list-decimal list-inside mt-2">
+            <li>数据包在传输中途闪烁消失</li>
+            <li>接收端对应槽位显示⚠️警告</li>
+            <li>1.5秒后自动重传，包上标记↻符号</li>
+            <li>重传速度加快30%</li>
+          </ol>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">🎬 操作建议</h3>
+          <div class="space-y-2 text-sm">
+            <p><strong>1. 先演示整体传：</strong>理解单个数据包的传输过程</p>
+            <p><strong>2. 显示拓扑结构：</strong>了解网络的完整连接</p>
+            <p><strong>3. 切换分包传：</strong>观察并行传输和丢包重传</p>
+            <p><strong>4. 使用暂停功能：</strong>在关键时刻暂停，详细讲解</p>
+          </div>
+        </section>
+        
+        <section>
+          <h3 class="text-xl font-bold text-white mb-3">💡 教学要点</h3>
+          <ul class="space-y-2 text-sm list-disc list-inside">
+            <li><strong>逐跳转发：</strong>路径线随数据包移动逐段显示，模拟真实路由过程</li>
+            <li><strong>路径独立性：</strong>每个分包独立选择路径，互不影响</li>
+            <li><strong>可靠性机制：</strong>丢包自动检测和重传</li>
+            <li><strong>序号重组：</strong>接收端按序号重新组装数据</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module">
+    // 配置参数
+    const CONFIG = {
+      nodeRows: 4,
+      nodeCols: 4,
+      nodeRadius: 16,
+      nodeStartX: 270,
+      nodeStartY: 30,
+      nodeSpacingX: 120,
+      nodeSpacingY: 100,
+      animationDuration: 600
+    };
+    
+    // 状态管理
+    let isAnimating = false;
+    let isPaused = false;
+    let currentPath = [];
+    let currentMode = 'basic'; // 'basic' or 'advanced'
+    let packets = [];
+    let receivedPackets = [];
+    let totalPackets = 0;
+    let lostPacketId = -1;
+    let pauseResolves = [];
+    let topologyVisible = false;
+    
+    // 生成网状拓扑结构（全连接）
+    function generateTopology(nodes) {
+      const topologyGroup = document.getElementById('topologyLines');
+      topologyGroup.innerHTML = '';
+      
+      // 每个节点与其他所有节点连接（全连接网状拓扑）
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          createTopologyLine(nodes[i], nodes[j], topologyGroup);
+        }
+      }
+    }
+    
+    // 创建拓扑连接线
+    function createTopologyLine(node1, node2, group) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', node1.x);
+      line.setAttribute('y1', node1.y);
+      line.setAttribute('x2', node2.x);
+      line.setAttribute('y2', node2.y);
+      line.classList.add('topology-line');
+      group.appendChild(line);
+    }
+    
+    // 切换拓扑显示
+    function toggleTopology() {
+      topologyVisible = !topologyVisible;
+      const topologyLines = document.querySelectorAll('.topology-line');
+      const toggleBtn = document.getElementById('toggleTopologyBtn');
+      
+      if (topologyVisible) {
+        topologyLines.forEach(line => line.classList.add('visible'));
+        toggleBtn.textContent = '隐藏拓扑';
+        toggleBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
+        toggleBtn.classList.add('bg-purple-600', 'hover:bg-purple-500');
+      } else {
+        topologyLines.forEach(line => line.classList.remove('visible'));
+        toggleBtn.textContent = '显示拓扑';
+        toggleBtn.classList.remove('bg-purple-600', 'hover:bg-purple-500');
+        toggleBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+      }
+    }
+    
+    // 初始化节点网格
+    function initNodes() {
+      const nodesGroup = document.getElementById('nodes');
+      const nodes = [];
+      
+      for (let row = 0; row < CONFIG.nodeRows; row++) {
+        for (let col = 0; col < CONFIG.nodeCols; col++) {
+          const x = CONFIG.nodeStartX + col * CONFIG.nodeSpacingX;
+          const y = CONFIG.nodeStartY + row * CONFIG.nodeSpacingY;
+          
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', x);
+          circle.setAttribute('cy', y);
+          circle.setAttribute('r', CONFIG.nodeRadius);
+          circle.setAttribute('fill', 'none');
+          circle.setAttribute('stroke', '#175FFF');
+          circle.setAttribute('stroke-width', '2.5');
+          circle.classList.add('node');
+          circle.dataset.row = row;
+          circle.dataset.col = col;
+          
+          nodesGroup.appendChild(circle);
+          nodes.push({ x, y, element: circle, row, col });
+        }
+      }
+      
+      return nodes;
+    }
+    
+    // 生成随机路径（从左到右，允许上下移动）
+    function generatePath(nodes) {
+      const path = [];
+      let currentRow = Math.floor(Math.random() * CONFIG.nodeRows);
+      
+      for (let col = 0; col < CONFIG.nodeCols; col++) {
+        const nodeIndex = currentRow * CONFIG.nodeCols + col;
+        path.push(nodes[nodeIndex]);
+        
+        // 随机决定下一列是否改变行
+        if (col < CONFIG.nodeCols - 1) {
+          const change = Math.random();
+          if (change < 0.3 && currentRow > 0) {
+            currentRow--;
+          } else if (change > 0.7 && currentRow < CONFIG.nodeRows - 1) {
+            currentRow++;
+          }
+        }
+      }
+      
+      return path;
+    }
+    
+    // 绘制路径线段（渐进式显示）
+    function drawPathSegment(fromX, fromY, toX, toY, color = '#F901F7') {
+      const pathLinesGroup = document.getElementById('pathLines');
+      
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', fromX);
+      line.setAttribute('y1', fromY);
+      line.setAttribute('x2', toX);
+      line.setAttribute('y2', toY);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-dasharray', '10 5');
+      line.style.opacity = '0';
+      line.classList.add('path-line');
+      pathLinesGroup.appendChild(line);
+      
+      // 显示这条路径线
+      anime({
+        targets: line,
+        opacity: [0, 0.6],
+        duration: 300,
+        easing: 'easeOutQuad'
+      });
+    }
+    
+    // 清空路径线
+    function clearPathLines() {
+      const pathLinesGroup = document.getElementById('pathLines');
+      pathLinesGroup.innerHTML = '';
+    }
+    
+    // 更新状态显示
+    function updateStatus(node, progress, status) {
+      document.getElementById('currentNode').textContent = node;
+      document.getElementById('progress').textContent = progress + '%';
+      document.getElementById('status').textContent = status;
+    }
+    
+    // 更新高级版状态显示
+    function updateAdvancedStatus(status, detail = '') {
+      document.getElementById('currentNode').textContent = detail || '-';
+      // 高级版根据接收进度显示百分比
+      if (totalPackets > 0 && receivedPackets.length > 0) {
+        const progress = Math.round((receivedPackets.length / totalPackets) * 100);
+        document.getElementById('progress').textContent = progress + '%';
+      } else {
+        document.getElementById('progress').textContent = '0%';
+      }
+      document.getElementById('status').textContent = status;
+    }
+    
+    // 暂停检查函数
+    async function checkPause() {
+      if (isPaused) {
+        await new Promise(resolve => {
+          pauseResolves.push(resolve);
+        });
+      }
+    }
+    
+    // 动画传输数据包（基础版）
+    async function animateTransmission(path, dataPacket) {
+      const container = document.getElementById('canvas-container');
+      const svgRect = document.getElementById('networkSvg').getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      dataPacket.style.display = 'flex';
+      
+      // 起始位置（发送端）
+      const startX = 120 - containerRect.left + svgRect.left - 15;
+      const startY = 225 - containerRect.top + svgRect.top - 15;
+      dataPacket.style.left = startX + 'px';
+      dataPacket.style.top = startY + 'px';
+      
+      updateStatus('发送端', 0, '传输中');
+      
+      await anime({
+        targets: dataPacket,
+        scale: [0, 1],
+        opacity: [0, 1],
+        duration: 300,
+        easing: 'easeOutBack'
+      }).finished;
+      
+      // 绘制从发送端到第一个节点的路径
+      drawPathSegment(120, 225, path[0].x, path[0].y);
+      
+      // 传输到每个节点
+      for (let i = 0; i < path.length; i++) {
+        const node = path[i];
+        const targetX = node.x - containerRect.left + svgRect.left - 15;
+        const targetY = node.y - containerRect.top + svgRect.top - 15;
+        
+        // 移动数据包
+        await anime({
+          targets: dataPacket,
+          left: targetX + 'px',
+          top: targetY + 'px',
+          duration: CONFIG.animationDuration,
+          easing: 'easeInOutQuad'
+        }).finished;
+        
+        // 检查暂停
+        await checkPause();
+        
+        // 激活节点
+        node.element.classList.add('active');
+        
+        const progress = Math.round(((i + 1) / (path.length + 1)) * 100);
+        updateStatus(`节点 ${i + 1}`, progress, '传输中');
+        
+        // 绘制到下一个节点的路径
+        if (i < path.length - 1) {
+          drawPathSegment(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y);
+        } else {
+          // 最后一个节点，绘制到接收端的路径
+          drawPathSegment(path[i].x, path[i].y, 780, 225);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await checkPause();
+      }
+      
+      // 传输到接收端
+      const endX = 825 - containerRect.left + svgRect.left - 15;
+      const endY = 225 - containerRect.top + svgRect.top - 15;
+      
+      await anime({
+        targets: dataPacket,
+        left: endX + 'px',
+        top: endY + 'px',
+        duration: CONFIG.animationDuration,
+        easing: 'easeInOutQuad'
+      }).finished;
+      
+      updateStatus('接收端', 100, '传输完成');
+      
+      // 数据包消失
+      await anime({
+        targets: dataPacket,
+        scale: [1, 0],
+        opacity: [1, 0],
+        duration: 300,
+        easing: 'easeInBack'
+      }).finished;
+      
+      dataPacket.style.display = 'none';
+    }
+    
+    // 重置动画
+    function reset() {
+      // 清除节点激活状态
+      document.querySelectorAll('.node').forEach(node => {
+        node.classList.remove('active');
+      });
+      
+      // 清空路径线
+      clearPathLines();
+      
+      // 清空数据包容器（移除所有数据包元素）
+      document.getElementById('packetsContainer').innerHTML = '';
+      
+      // 清空重组区域
+      if (currentMode === 'advanced') {
+        document.getElementById('packetSlots').innerHTML = '';
+        document.getElementById('reassemblyStatus').textContent = '';
+        totalPackets = 0;
+        lostPacketId = -1;
+      }
+      
+      // 重置状态
+      if (currentMode === 'basic') {
+        updateStatus('待发送', 0, '就绪');
+      } else {
+        updateAdvancedStatus('就绪', '等待发送');
+      }
+      isAnimating = false;
+      isPaused = false;
+      receivedPackets = [];
+      pauseResolves = [];
+      
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('pauseBtn').textContent = '暂停';
+    }
+    
+    // 创建数据包元素
+    function createPacket(id, color) {
+      const packet = document.createElement('div');
+      packet.className = 'data-packet';
+      packet.style.background = color;
+      packet.style.display = 'none';
+      packet.innerHTML = id;
+      packet.dataset.id = id;
+      document.getElementById('packetsContainer').appendChild(packet);
+      return packet;
+    }
+    
+    // 绘制多条路径的单个片段（高级版渐进式显示）
+    function drawPathSegmentAdvanced(fromX, fromY, toX, toY, color) {
+      const pathLinesGroup = document.getElementById('pathLines');
+      
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', fromX);
+      line.setAttribute('y1', fromY);
+      line.setAttribute('x2', toX);
+      line.setAttribute('y2', toY);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('stroke-dasharray', '5 3');
+      line.style.opacity = '0';
+      pathLinesGroup.appendChild(line);
+      
+      // 显示这条路径线
+      anime({
+        targets: line,
+        opacity: [0, 0.5],
+        duration: 300,
+        easing: 'easeOutQuad'
+      });
+    }
+    
+    // 高级版传输动画
+    async function animateAdvancedTransmission(packetConfigs) {
+      const container = document.getElementById('canvas-container');
+      const svgRect = document.getElementById('networkSvg').getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      // 初始化重组区域
+      const slotsContainer = document.getElementById('packetSlots');
+      slotsContainer.innerHTML = '';
+      receivedPackets = [];
+      
+      packetConfigs.forEach((config, index) => {
+        const slot = document.createElement('div');
+        slot.className = 'packet-slot';
+        slot.dataset.id = index + 1;
+        slot.innerHTML = `<span class="text-gray-500">${index + 1}</span>`;
+        slotsContainer.appendChild(slot);
+      });
+      
+      document.getElementById('reassemblyStatus').textContent = '等待数据包到达...';
+      
+      // 更新状态：开始分包
+      updateAdvancedStatus('分包中', `共${packetConfigs.length}个包`);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      updateAdvancedStatus('分包传输中', `${packetConfigs.length}个包并行传输`);
+      
+      // 并行传输所有数据包
+      const transmissions = packetConfigs.map(async (config, index) => {
+        const packet = config.element;
+        const path = config.path;
+        const isLost = config.isLost;
+        
+        packet.style.display = 'flex';
+        
+        // 起始位置
+        const startX = 120 - containerRect.left + svgRect.left - 15;
+        const startY = 225 - containerRect.top + svgRect.top - 15;
+        packet.style.left = startX + 'px';
+        packet.style.top = startY + 'px';
+        
+        await anime({
+          targets: packet,
+          scale: [0, 1],
+          opacity: [0, 1],
+          duration: 300,
+          delay: index * 200,
+          easing: 'easeOutBack'
+        }).finished;
+        
+        await checkPause();
+        
+        // 绘制从发送端到第一个节点的路径
+        const colors = ['#F901F7', '#67F844', '#FFD700', '#00CED1'];
+        const color = colors[index % colors.length];
+        drawPathSegmentAdvanced(120, 225, path[0].x, path[0].y, color);
+        
+        // 传输到节点
+        for (let i = 0; i < path.length; i++) {
+          const node = path[i];
+          const targetX = node.x - containerRect.left + svgRect.left - 15;
+          const targetY = node.y - containerRect.top + svgRect.top - 15;
+          
+          await anime({
+            targets: packet,
+            left: targetX + 'px',
+            top: targetY + 'px',
+            duration: CONFIG.animationDuration,
+            easing: 'easeInOutQuad'
+          }).finished;
+          
+          await checkPause();
+          
+          node.element.classList.add('active');
+          
+          // 绘制到下一个节点的路径
+          if (i < path.length - 1) {
+            drawPathSegmentAdvanced(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, color);
+          } else {
+            // 最后一个节点，绘制到接收端的路径
+            drawPathSegmentAdvanced(path[i].x, path[i].y, 780, 225, color);
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await checkPause();
+        }
+        
+        // 模拟丢包
+        if (isLost) {
+          // 更新状态：检测到丢包
+          updateAdvancedStatus('检测到丢包', `${index + 1}号包丢失`);
+          
+          await checkPause();
+          
+          // 闪烁后消失
+          await anime({
+            targets: packet,
+            opacity: [1, 0, 1, 0],
+            duration: 600,
+            easing: 'linear'
+          }).finished;
+          
+          await checkPause();
+          
+          packet.style.display = 'none';
+          
+          // 标记槽位为等待重传
+          const slot = slotsContainer.querySelector(`[data-id="${index + 1}"]`);
+          slot.classList.add('waiting');
+          slot.innerHTML = `<span class="text-red-500">⚠️</span>`;
+          
+          // 延迟后重传
+          updateAdvancedStatus('等待重传', `${index + 1}号包准备重传`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await checkPause();
+          
+          updateAdvancedStatus('丢包重传中', `${index + 1}号包重新发送`);
+          
+          packet.innerHTML = `${index + 1}<span style="font-size: 12px;">↻</span>`;
+          packet.style.display = 'flex';
+          packet.style.left = startX + 'px';
+          packet.style.top = startY + 'px';
+          
+          await anime({
+            targets: packet,
+            scale: [0, 1],
+            opacity: [0, 1],
+            duration: 300,
+            easing: 'easeOutBack'
+          }).finished;
+          
+          // 重传时绘制路径
+          drawPathSegmentAdvanced(120, 225, path[0].x, path[0].y, color);
+          
+          // 快速重传
+          for (let i = 0; i < path.length; i++) {
+            const node = path[i];
+            const targetX = node.x - containerRect.left + svgRect.left - 15;
+            const targetY = node.y - containerRect.top + svgRect.top - 15;
+            
+            await anime({
+              targets: packet,
+              left: targetX + 'px',
+              top: targetY + 'px',
+              duration: CONFIG.animationDuration * 0.7,
+              easing: 'easeInOutQuad'
+            }).finished;
+            
+            await checkPause();
+            
+            // 绘制重传路径
+            if (i < path.length - 1) {
+              drawPathSegmentAdvanced(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, color);
+            } else {
+              drawPathSegmentAdvanced(path[i].x, path[i].y, 780, 225, color);
+            }
+          }
+        }
+        
+        // 到达接收端
+        const endX = 825 - containerRect.left + svgRect.left - 15;
+        const endY = 225 - containerRect.top + svgRect.top - 15;
+        
+        await anime({
+          targets: packet,
+          left: endX + 'px',
+          top: endY + 'px',
+          duration: CONFIG.animationDuration,
+          easing: 'easeInOutQuad'
+        }).finished;
+        
+        // 放入槽位
+        const slot = slotsContainer.querySelector(`[data-id="${index + 1}"]`);
+        slot.classList.remove('waiting');
+        slot.classList.add('filled');
+        slot.innerHTML = packet.innerHTML;
+        slot.style.background = packet.style.background;
+        
+        receivedPackets.push(index + 1);
+        
+        // 更新状态：数据包到达（会自动更新百分比）
+        updateAdvancedStatus('接收中', `${receivedPackets.length}/${packetConfigs.length}个包已到达`);
+        
+        await checkPause();
+        
+        await anime({
+          targets: packet,
+          scale: [1, 0],
+          opacity: [1, 0],
+          duration: 300,
+          easing: 'easeInBack'
+        }).finished;
+        
+        packet.style.display = 'none';
+        
+        // 检查是否全部到达
+        if (receivedPackets.length === packetConfigs.length) {
+          updateAdvancedStatus('重组完成', '所有包已到达');
+          document.getElementById('reassemblyStatus').innerHTML = '<span class="text-accent font-bold">✓ 数据重组完成！</span>';
+        }
+      });
+      
+      await Promise.all(transmissions);
+    }
+    
+    // 更新数据包结构图示
+    function updatePacketStructure(mode) {
+      const container = document.getElementById('packetStructure');
+      container.innerHTML = '';
+      
+      if (mode === 'basic') {
+        // 整体传：显示一个完整数据包（大尺寸）
+        const packet = document.createElement('div');
+        packet.className = 'packet-structure-item';
+        packet.innerHTML = `
+          <div class="packet-part packet-header large">包头</div>
+          <div class="packet-part packet-data large">数据</div>
+          <div class="packet-part packet-trailer large">包尾</div>
+        `;
+        container.appendChild(packet);
+        
+        const label = document.createElement('div');
+        label.className = 'text-gray-400 text-xs text-center mt-1';
+        label.textContent = '完整数据包';
+        container.appendChild(label);
+      } else {
+        // 分包传：显示4个小数据包
+        for (let i = 1; i <= 4; i++) {
+          const packet = document.createElement('div');
+          packet.className = 'packet-structure-item';
+          packet.innerHTML = `
+            <span class="text-gray-400 text-xs" style="width: 12px;">${i}</span>
+            <div class="packet-part packet-header" style="flex: 0 0 25%;">头</div>
+            <div class="packet-part packet-data" style="flex: 1;">数据${i}</div>
+            <div class="packet-part packet-trailer" style="flex: 0 0 18%;">尾</div>
+          `;
+          container.appendChild(packet);
+        }
+        
+        const label = document.createElement('div');
+        label.className = 'text-gray-400 text-xs text-center mt-1';
+        label.textContent = '分包后的数据包';
+        container.appendChild(label);
+      }
+    }
+    
+    // 切换模式
+    function switchMode(mode) {
+      currentMode = mode;
+      
+      // 更新按钮状态
+      document.getElementById('basicModeBtn').classList.toggle('active', mode === 'basic');
+      document.getElementById('advancedModeBtn').classList.toggle('active', mode === 'advanced');
+      
+      // 显示/隐藏重组区域
+      if (mode === 'advanced') {
+        document.getElementById('reassemblyArea').style.display = 'block';
+      } else {
+        document.getElementById('reassemblyArea').style.display = 'none';
+      }
+      
+      // 更新数据包结构图示
+      updatePacketStructure(mode);
+      
+      reset();
+    }
+    
+    // 初始化
+    const nodes = initNodes();
+    generateTopology(nodes);
+    updatePacketStructure('basic'); // 初始化数据包结构图示
+    
+    // 发送按钮事件
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      if (isAnimating) return;
+      
+      isAnimating = true;
+      isPaused = false;
+      pauseResolves = [];
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+      
+      if (currentMode === 'basic') {
+        // 基础版：单个数据包
+        const dataPacket = document.getElementById('packetsContainer').querySelector('.data-packet') || createPacket('📦', 'linear-gradient(135deg, #67F844, #F901F7)');
+        currentPath = generatePath(nodes);
+        clearPathLines();
+        await animateTransmission(currentPath, dataPacket);
+      } else {
+        // 高级版：多个分包
+        const packetColors = [
+          'linear-gradient(135deg, #F901F7, #FF6B6B)',
+          'linear-gradient(135deg, #67F844, #00CED1)',
+          'linear-gradient(135deg, #FFD700, #FF8C00)',
+          'linear-gradient(135deg, #00CED1, #175FFF)'
+        ];
+        
+        // 清空容器
+        document.getElementById('packetsContainer').innerHTML = '';
+        
+        const packetConfigs = [];
+        const paths = [];
+        
+        for (let i = 0; i < 4; i++) {
+          const packet = createPacket(i + 1, packetColors[i]);
+          const path = generatePath(nodes);
+          paths.push(path);
+          
+          // 随机选择一个包模拟丢失（30%概率）
+          const isLost = i === 2 && Math.random() < 0.8; // 第3个包有80%概率丢失
+          
+          packetConfigs.push({
+            element: packet,
+            path: path,
+            isLost: isLost
+          });
+        }
+        
+        clearPathLines();
+        
+        totalPackets = packetConfigs.length;
+        lostPacketId = packetConfigs.findIndex(p => p.isLost) + 1;
+        
+        await animateAdvancedTransmission(packetConfigs);
+      }
+      
+      isAnimating = false;
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+    });
+    
+    // 暂停/继续按钮事件
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      if (!isAnimating) return;
+      
+      isPaused = !isPaused;
+      const pauseBtn = document.getElementById('pauseBtn');
+      
+      if (isPaused) {
+        pauseBtn.textContent = '继续';
+        pauseBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-500');
+        pauseBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+      } else {
+        pauseBtn.textContent = '暂停';
+        pauseBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
+        pauseBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-500');
+        // 恢复所有等待中的Promise
+        const resolves = [...pauseResolves];
+        pauseResolves = [];
+        resolves.forEach(resolve => resolve());
+      }
+    });
+    
+    // 重置按钮事件
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    
+    // 模式切换事件
+    document.getElementById('basicModeBtn').addEventListener('click', () => switchMode('basic'));
+    document.getElementById('advancedModeBtn').addEventListener('click', () => switchMode('advanced'));
+    
+    // 拓扑显示切换事件
+    document.getElementById('toggleTopologyBtn').addEventListener('click', toggleTopology);
+    
+    // 教学帮助按钮事件
+    document.getElementById('helpBtn').addEventListener('click', () => {
+      document.getElementById('helpModal').classList.add('active');
+    });
+    
+    document.getElementById('helpClose').addEventListener('click', () => {
+      document.getElementById('helpModal').classList.remove('active');
+    });
+    
+    // 点击弹窗外部关闭
+    document.getElementById('helpModal').addEventListener('click', (e) => {
+      if (e.target.id === 'helpModal') {
+        document.getElementById('helpModal').classList.remove('active');
+      }
+    });
+  </script>
+
+</body></html>
